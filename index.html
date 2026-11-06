@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="出货助手">
+<meta name="description" content="手机端订单记录与出货提醒：记录公司、货品、数量、交付日期，到期置顶提醒，支持关键词搜索与导出备份。">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>出货助手 · 订单记录与到期提醒</title>
+<style>
+:root{
+  --teal:#0f766e; --teal-2:#14b8a6; --teal-soft:#e6f5f3;
+  --bg:#f4f6f8; --card:#ffffff; --ink:#12201f; --ink-2:#5a6b6a; --ink-3:#8b9b99;
+  --line:#e4e9ec; --warn:#d97706; --warn-soft:#fff5e6; --danger:#dc2626; --danger-soft:#fdeaea;
+  --ok:#0d9488; --shadow:0 1px 2px rgba(16,40,40,.06),0 8px 24px rgba(16,40,40,.07);
+  --r:16px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --teal:#14b8a6; --teal-2:#2dd4bf; --teal-soft:#122c2a;
+    --bg:#0d1417; --card:#151d21; --ink:#e8f0ef; --ink-2:#a2b3b2; --ink-3:#7b8c8b;
+    --line:#243034; --warn:#f59e0b; --warn-soft:#2b2113; --danger:#f87171; --danger-soft:#2c1717;
+    --ok:#2dd4bf; --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",Roboto,sans-serif;
+  font-size:16px; line-height:1.5; overscroll-behavior-y:none;
+}
+.wrap{max-width:560px;margin:0 auto;padding:0 14px calc(76px + env(safe-area-inset-bottom))}
+header.top{
+  position:sticky;top:0;z-index:30;
+  background:linear-gradient(135deg,var(--teal),var(--teal-2));
+  color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 12px;
+  border-radius:0 0 18px 18px;box-shadow:var(--shadow);
+}
+header.top .t1{display:flex;align-items:center;justify-content:space-between;gap:10px}
+header.top h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.5px}
+header.top .sub{margin-top:2px;font-size:12.5px;opacity:.9}
+.pill-date{font-size:12.5px;background:rgba(255,255,255,.18);padding:5px 10px;border-radius:999px;white-space:nowrap}
+.stats{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.stats::-webkit-scrollbar{display:none}
+.stat{flex:1 0 auto;min-width:78px;background:rgba(255,255,255,.16);border-radius:12px;padding:7px 9px}
+.stat b{display:block;font-size:18px;line-height:1.2;font-weight:700}
+.stat span{font-size:11.5px;opacity:.92}
+.stat.hot{background:rgba(255,255,255,.3)}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-top:14px}
+.card>h2{margin:0 0 4px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:7px}
+.card>h2 .n{font-size:12px;font-weight:600;background:var(--teal-soft);color:var(--teal);border-radius:999px;padding:2px 8px}
+.hint{color:var(--ink-3);font-size:12.5px;margin:0}
+/* 到期提醒 */
+.alert{border-radius:var(--r);margin-top:14px;padding:12px 14px;background:var(--card);box-shadow:var(--shadow);border-left:5px solid var(--warn)}
+.alert.over{border-left-color:var(--danger)}
+.alert .head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.alert .head strong{font-size:15.5px}
+.alert.ok{border-left-color:var(--ok)}
+.rem{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px dashed var(--line)}
+.rem .info{flex:1;min-width:0}
+.rem .info b{font-size:15px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rem .info small{color:var(--ink-3);font-size:12.5px;display:block;margin-top:2px}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.tag.due{background:var(--warn-soft);color:var(--warn)}
+.tag.over{background:var(--danger-soft);color:var(--danger)}
+.tag.pend{background:var(--teal-soft);color:var(--teal)}
+.tag.ship{background:rgba(13,148,136,.12);color:var(--ok)}
+.tag.late{background:var(--danger-soft);color:var(--danger)}
+/* 表单 */
+.field{margin-top:12px}
+.field label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:6px;font-weight:600}
+.field label i{color:var(--danger);font-style:normal;margin-left:2px}
+.field .opt{color:var(--ink-3);font-weight:400}
+input[type=text],input[type=date],input[type=number],select,textarea{
+  width:100%;padding:11px 12px;font-size:16px;color:var(--ink);background:var(--bg);
+  border:1.5px solid var(--line);border-radius:11px;outline:none;font-family:inherit;
+  -webkit-appearance:none;appearance:none;
+}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);background:var(--card)}
+textarea{min-height:60px;resize:vertical}
+.row2{display:flex;gap:10px}
+.row2 .field{flex:1;min-width:0}
+.qtyrow{display:flex;gap:10px}
+.qtyrow .field{margin-top:0}
+.qtyrow .q1{flex:1.2;min-width:0}.qtyrow .q2{flex:1;min-width:0}
+.switch{display:flex;gap:8px;margin-top:8px}
+.switch button{flex:1;border:1.5px solid var(--line);background:var(--bg);color:var(--ink-2);border-radius:10px;padding:9px 4px;font-size:14px;font-weight:600}
+.switch button.on{border-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-size:15.5px;font-weight:700;background:var(--teal);color:#fff;font-family:inherit}
+.btn:active{transform:scale(.985)}
+.btn.w{width:100%;margin-top:16px}
+.btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line);font-weight:600}
+.btn.sm{padding:7px 11px;font-size:13px;border-radius:9px;font-weight:600}
+.btn.tealsoft{background:var(--teal-soft);color:var(--teal)}
+.btn.go{background:var(--ok);color:#fff}
+.btn.danger{background:var(--danger-soft);color:var(--danger)}
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rowbtns .btn.sm{flex:1;min-width:80px;text-align:center}
+.remind-prev{margin-top:10px;font-size:13px;color:var(--ink-2);background:var(--teal-soft);border-radius:10px;padding:9px 11px}
+.remind-prev b{color:var(--teal)}
+/* 搜索 */
+.searchbox{position:relative}
+.searchbox input{padding-left:36px}
+.searchbox .mag{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:15px}
+.searchbox .clr{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:var(--line);color:var(--ink-2);width:24px;height:24px;border-radius:50%;font-size:13px;line-height:1}
+.chips{display:flex;gap:8px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1.5px solid var(--line);background:var(--card);color:var(--ink-2);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:600;white-space:nowrap}
+.chip.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.chip .c{opacity:.75;margin-left:4px;font-weight:500}
+/* 列表 */
+.group{margin-top:16px;font-size:13px;font-weight:700;color:var(--ink-3);letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+.group:after{content:"";flex:1;height:1px;background:var(--line)}
+.o{background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-top:10px;overflow:hidden}
+.o .main{display:flex;align-items:flex-start;gap:10px;padding:12px 13px}
+.o .dot{width:9px;height:9px;border-radius:50%;margin-top:7px;flex:0 0 auto;background:var(--warn)}
+.o .dot.ship{background:var(--ok)}
+.o .dot.over{background:var(--danger)}
+.o .dot.wait{background:var(--ink-3)}
+.o .body{flex:1;min-width:0}
+.o .l1{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.o .co{font-size:15.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.o .no{font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.o .l2{font-size:14px;color:var(--ink);margin-top:3px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.o .qty{font-weight:700;color:var(--teal)}
+.o .l3{font-size:12.5px;color:var(--ink-3);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.o .l3 s{text-decoration-color:var(--danger)}
+.o .expand{border:0;background:transparent;color:var(--ink-3);font-size:13px;padding:2px 4px}
+.detail{border-top:1px dashed var(--line);padding:11px 13px 13px;background:var(--bg);font-size:13.5px}
+.detail dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px}
+.detail dt{color:var(--ink-3);white-space:nowrap}
+.detail dd{margin:0;color:var(--ink)}
+.empty{text-align:center;color:var(--ink-3);font-size:14px;padding:34px 10px}
+.empty b{display:block;color:var(--ink-2);font-size:15px;margin-bottom:6px}
+mark{background:#ffe08a;color:#3b2c00;border-radius:3px;padding:0 1px}
+@media (prefers-color-scheme:dark){mark{background:#7a5c00;color:#ffe9b0}}
+/* tabbar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--card);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);display:flex;box-shadow:0 -2px 12px rgba(0,0,0,.05)}
+nav.tabs button{flex:1;border:0;background:transparent;color:var(--ink-3);font-size:11.5px;padding:8px 2px 7px;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav.tabs button .ic{font-size:19px;line-height:1}
+nav.tabs button.on{color:var(--teal);font-weight:700}
+nav.tabs button .bdg{position:absolute;transform:translate(14px,-6px);min-width:17px;height:17px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px}
+nav.tabs button .bdg.show{display:flex}
+section.page{display:none}
+section.page.on{display:block}
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:80;
+  background:rgba(18,32,31,.94);color:#fff;border-radius:12px;padding:11px 15px;font-size:14px;max-width:88%;
+  display:none;align-items:center;gap:12px;box-shadow:var(--shadow)}
+#toast.show{display:flex}
+#toast button{border:0;background:var(--teal-2);color:#04231f;font-weight:700;border-radius:8px;padding:6px 10px;font-size:13px}
+.note{font-size:12.5px;color:var(--ink-3);line-height:1.65;margin:8px 0 0}
+.kv{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line);font-size:14.5px}
+.kv:first-of-type{border-top:0}
+.kv span{color:var(--ink-2)}
+.kv b{font-variant-numeric:tabular-nums}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:32px;height:32px;border-radius:9px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:18px;line-height:1}
+.stepper input{width:56px;text-align:center;padding:7px}
+.help h3{font-size:14.5px;margin:16px 0 6px;color:var(--teal)}
+.help p,.help li{font-size:13.5px;color:var(--ink-2);line-height:1.7;margin:4px 0}
+.help ol,.help ul{padding-left:20px;margin:4px 0}
+.help code{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px;color:var(--ink)}
+.hiddenFile{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.warnbar{margin-top:12px;background:var(--warn-soft);color:var(--warn);border-radius:11px;padding:10px 12px;font-size:13px;display:none}
+.warnbar.show{display:block}
+/* 货物行 */
+.item-row{background:var(--bg);border-radius:11px;padding:10px 11px;margin-top:10px;position:relative}
+.item-row .ir-top{display:flex;align-items:center;gap:8px}
+.item-row .ir-ix{font-size:12px;font-weight:700;color:var(--teal);white-space:nowrap;min-width:28px}
+.item-row .ir-name{flex:1;min-width:0}
+.item-row .ir-name input{padding:9px 10px;font-size:15px}
+.item-row .ir-close{border:0;background:transparent;color:var(--ink-3);font-size:17px;padding:0 4px;line-height:1}
+.item-row .ir-qty{margin-top:8px;display:flex;gap:8px;align-items:center}
+.item-row .ir-qty .switch{flex:0 0 auto}
+.item-row .ir-qty .switch button{padding:6px 8px;font-size:12.5px}
+.item-row .ir-qty .ir-num{flex:1;min-width:0}
+.item-row .ir-qty .ir-num input{padding:9px 10px;font-size:15px}
+.item-row .ir-qty .ir-unit{width:72px;flex:0 0 auto}
+.item-row .ir-qty .ir-unit select{padding:9px 6px 9px 8px;font-size:15px;background-position:calc(100% - 12px) 15px,calc(100% - 8px) 15px;text-align:center}
+/* 日期行缩小 */
+.date-sm{font-size:14px !important;padding:9px 10px !important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="t1">
+    <h1>出货助手</h1>
+    <span class="pill-date" id="hdToday">--</span>
+  </div>
+  <div class="sub" id="hdSub">订单记录 · 到期置顶提醒 · 关键词检索</div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="wrap">
+  <div class="warnbar" id="storeWarn"></div>
+
+  <!-- 记一单 -->
+  <section class="page on" id="pg-new">
+    <div id="alertSlot"></div>
+    <div class="card">
+      <h2 id="formTitle">记一单</h2>
+      <p class="hint" id="formHint">填公司和货品就能提交，提醒日按你的设置自动生成。</p>
+      <form id="form" autocomplete="off">
+        <input type="hidden" id="fId">
+        <div class="field">
+          <label for="fCompany">公司名称<i>*</i></label>
+          <input type="text" id="fCompany" placeholder="例：杭州明泰实业有限公司" maxlength="60">
+        </div>
+        <div id="itemsList">
+          <!-- 货物行由 JS 动态生成 -->
+        </div>
+        <button type="button" class="btn sm tealsoft" id="addItemBtn" style="margin-top:10px">＋ 添加货物</button>
+        <div class="row2">
+          <div class="field"><label for="fDelivery">交付日期 <span class="opt">（选填）</span></label><input type="date" id="fDelivery"></div>
+          <div class="field"><label for="fRemind">提醒日期</label><input type="date" id="fRemind"></div>
+        </div>
+        <div class="remind-prev" id="remindPrev"></div>
+        <div class="field">
+          <label for="fNote">备注 <span class="opt">（选填）</span></label>
+          <textarea id="fNote" placeholder="规格、单价、收货地址、对接人等" maxlength="300"></textarea>
+        </div>
+        <button class="btn w" type="submit" id="submitBtn">提交并生成订单</button>
+        <div class="rowbtns" id="editBtns" style="display:none">
+          <button type="button" class="btn sm ghost" id="cancelEdit">取消编辑</button>
+        </div>
+      </form>
+    </div>
+    <div class="card">
+      <h2>最近三单 <span class="n" id="recentN">0</span></h2>
+      <div id="recentList"></div>
+      <div class="rowbtns"><button type="button" class="btn sm tealsoft" data-go="list">查看全部订单</button></div>
+    </div>
+  </section>
+
+  <!-- 订单列表 / 搜索 -->
+  <section class="page" id="pg-list">
+    <div class="card">
+      <div class="searchbox">
+        <span class="mag">搜</span>
+        <input type="text" id="q" placeholder="关键词：公司 / 货品 / 备注，空格分词同时匹配">
+        <button type="button" class="clr" id="qClear" style="display:none">×</button>
+      </div>
+      <div class="chips" id="chips"></div>
+      <p class="hint" id="listMeta" style="margin-top:10px"></p>
+    </div>
+    <div id="listSlot"></div>
+  </section>
+
+  <!-- 我的 -->
+  <section class="page" id="pg-me">
+    <div class="card">
+      <h2>数据概览</h2>
+      <div id="overview"></div>
+    </div>
+    <div class="card">
+      <h2>提醒设置</h2>
+      <div class="kv">
+        <span>提交后第几天提醒</span>
+        <div class="stepper">
+          <button type="button" id="rmMinus">−</button>
+          <input type="text" id="rmDays" inputmode="numeric">
+          <button type="button" id="rmPlus">＋</button>
+        </div>
+      </div>
+      <div class="kv"><span>默认数量单位</span><b id="defUnitTxt">-</b></div>
+      <p class="note">改动只对之后的新订单生效；已存在的订单会按新的间隔重算提醒日，除非你手动改过那一单的提醒日。</p>
+    </div>
+    <div class="card">
+      <h2>备份与恢复</h2>
+      <p class="note">数据保存在这台手机的浏览器里。换手机、卸载浏览器或清理缓存前，请先导出备份。</p>
+      <div class="rowbtns">
+        <button type="button" class="btn sm tealsoft" id="expCsv">导出 CSV 表格</button>
+        <button type="button" class="btn sm tealsoft" id="expJson">导出 JSON 备份</button>
+        <button type="button" class="btn sm ghost" id="impBtn">导入 JSON 恢复</button>
+      </div>
+      <input type="file" class="hiddenFile" id="impFile" accept=".json,application/json">
+      <div class="kv" style="margin-top:6px"><span>上次导出备份</span><b id="lastBackup">从未导出</b></div>
+      <div class="rowbtns">
+        <button type="button" class="btn sm danger" id="wipe">清空全部数据</button>
+      </div>
+    </div>
+    <div class="card help">
+      <h2>在手机上当 App 用</h2>
+      <div id="helpBody"></div>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs">
+  <button type="button" class="on" data-tab="new"><span class="ic">＋</span>记一单</button>
+  <button type="button" data-tab="list"><span class="ic">≡</span>订单<span class="bdg" id="bdgList"></span></button>
+  <button type="button" data-tab="me"><span class="ic">◍</span>我的</button>
+</nav>
+
+<div id="toast"><span id="toastMsg"></span></div>
+
+<script>
+
+(function () {
+  'use strict';
+
+  var LS = 'dd_orders_v2';
+  var LS_LEGACY = 'dd_orders_v1';
+  var CFG = 'dd_config_v1';
+  var LAST = 'dd_last_backup_v1';
+
+  var UNITS = {
+    weight: ['吨', '千克', '斤', '公斤', '克', '吨位'],
+    count: ['个', '件', '箱', '包', '套', '袋', '桶', '卷', '米', '台', '只', '打']
+  };
+
+  var state = {
+    orders: [],
+    cfg: { remindDays: 3, defUnit: '件' },
+    page: 'new',
+    filter: 'all',
+    kw: '',
+    editId: null,
+    openId: null,
+    toastTimer: null,
+    items: [] // [{name,qty,unit,kind}] for current form
+  };
+
+  // ---------- 基础工具 ----------
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function today() { return ymd(new Date()); }
+  function parseYmd(s) {
+    var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(s || '').trim());
+    if (!m) return null;
+    var y = +m[1], mo = +m[2], da = +m[3];
+    var d = new Date(y, mo - 1, da);
+    if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da) return null;
+    return d;
+  }
+  function addDays(s, n) {
+    var d = parseYmd(s);
+    if (!d) return '';
+    d.setDate(d.getDate() + n);
+    return ymd(d);
+  }
+  function diffDays(a, b) {
+    var da = parseYmd(a), db = parseYmd(b);
+    if (!da || !db) return 0;
+    return Math.round((db.getTime() - da.getTime()) / 86400000);
+  }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function el(id) { return document.getElementById(id); }
+  function num(n) { return (n || 0).toLocaleString('zh-CN'); }
+  function seqNo(o) { return o.no ? '#' + pad(o.no) : ''; }
+
+  // 多货品格式化
+  function fmtOne(it) { return String(it.qty) + (it.unit || ''); }
+  function fmtItems(items) {
+    if (!items || !items.length) return '';
+    return items.map(function (it) { return it.name + ' ' + fmtOne(it); }).join('、');
+  }
+  function itemsSummary(items) {
+    if (!items || !items.length) return '无';
+    return items.length === 1 ? items[0].name : (items[0].name + ' 等 ' + items.length + ' 件');
+  }
+
+  var WD = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  function pretty(s) {
+    var d = parseYmd(s);
+    if (!d) return '';
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + WD[d.getDay()];
+  }
+  function withYear(s) {
+    var d = parseYmd(s);
+    if (!d) return '';
+    var t = parseYmd(today());
+    return (d.getFullYear() === t.getFullYear() ? '' : d.getFullYear() + '年') + pretty(s);
+  }
+
+  function uid() {
+    return 'o' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36) +
+      Math.floor(Math.random() * 1e6).toString(36);
+  }
+
+  // ---------- 存储 + 迁移 ----------
+  var storeMode = 'localStorage';
+  function migrateLegacy() {
+    try {
+      var raw = localStorage.getItem(LS_LEGACY);
+      if (!raw) return;
+      var old = JSON.parse(raw);
+      if (!Array.isArray(old) || !old.length) { localStorage.removeItem(LS_LEGACY); return; }
+      var migrated = false;
+      old.forEach(function (o) {
+        if (o.items && o.items.length) return; // already v2
+        o.items = [{ name: o.item || '', qty: o.qty || 0, unit: o.unit || '', kind: o.kind || 'count' }];
+        migrated = true;
+      });
+      if (migrated) {
+        var existing = loadOrdersRaw();
+        var ids = {};
+        existing.forEach(function (o) { ids[o.id] = 1; });
+        var add = old.filter(function (o) { return !ids[o.id]; });
+        if (add.length) {
+          state.orders = existing.concat(add);
+          saveOrders();
+          localStorage.removeItem(LS_LEGACY);
+          return true;
+        }
+      }
+      localStorage.removeItem(LS_LEGACY);
+    } catch (e) { }
+    return false;
+  }
+  function saveOrders() {
+    try {
+      localStorage.setItem(LS, JSON.stringify(state.orders));
+      return true;
+    } catch (e) {
+      storeWarn();
+      toast('保存失败：本机存储空间不足，请先导出备份');
+      return false;
+    }
+  }
+  function loadOrdersRaw() {
+    try {
+      var raw = localStorage.getItem(LS);
+      if (!raw) return [];
+      var a = JSON.parse(raw);
+      return Array.isArray(a) ? a : [];
+    } catch (e) { return []; }
+  }
+  function loadOrders() {
+    var list = loadOrdersRaw();
+    // Ensure every order has items array (migration safety)
+    list.forEach(function (o) {
+      if (!o.items || !o.items.length) {
+        o.items = [{ name: o.item || '', qty: o.qty || 0, unit: o.unit || '', kind: o.kind || 'count' }];
+      }
+    });
+    return list;
+  }
+  function loadCfg() {
+    try {
+      var raw = localStorage.getItem(CFG);
+      if (!raw) return;
+      var c = JSON.parse(raw);
+      if (c && typeof c === 'object') {
+        var d = parseInt(c.remindDays, 10);
+        if (!isNaN(d) && d >= 0 && d <= 60) state.cfg.remindDays = d;
+        if (typeof c.defUnit === 'string' && c.defUnit) state.cfg.defUnit = c.defUnit;
+      }
+    } catch (e) { }
+  }
+  function saveCfg() {
+    try { localStorage.setItem(CFG, JSON.stringify(state.cfg)); } catch (e) { }
+  }
+
+  function probeStorage() {
+    try {
+      var k = LS + '_probe';
+      localStorage.setItem(k, '1');
+      localStorage.removeItem(k);
+      return true;
+    } catch (e) { return false; }
+  }
+  function storeWarn() {
+    if (storeMode === 'warned') return;
+    storeMode = 'warned';
+    var w = el('storeWarn');
+    w.className = 'warnbar show';
+    w.innerHTML = '当前浏览器不允许本地写入，新订单<strong>无法保存</strong>。请改用系统浏览器或夸克打开本文件，并先「导出 JSON 备份」。';
+  }
+
+  // ---------- 推算 ----------
+  function dueOf(o) { return addDays(o.createdAt, state.cfg.remindDays); }
+  function recompute() {
+    var ch = 0;
+    state.orders.forEach(function (o) {
+      if (o.remindAuto !== false && o.remindDate) { o.remindDate = ''; ch++; }
+    });
+    if (ch) saveOrders();
+  }
+  function statusOf(o) {
+    if (o.shipped) return 'ship';
+    var due = dueOf(o);
+    if (!due) return 'wait';
+    var d = diffDays(today(), due);
+    if (d < 0) return 'over';
+    if (d === 0) return 'due';
+    return 'pend';
+  }
+  function isRemind(o) { var s = statusOf(o); return s === 'over' || s === 'due'; }
+  function dueInDays(o) { return diffDays(today(), dueOf(o)); }
+
+  function remindList() {
+    return state.orders.filter(isRemind).sort(function (a, b) {
+      var d = dueInDays(a) - dueInDays(b);
+      if (d) return d;
+      return String(a.createdAt).localeCompare(String(b.createdAt));
+    });
+  }
+  function upcomingList() {
+    var lo = today();
+    return state.orders.filter(function (o) {
+      if (o.shipped) return false;
+      var due = dueOf(o);
+      if (!due) return false;
+      var d = diffDays(lo, due);
+      return d >= 0 && d <= 7;
+    }).sort(function (a, b) { return dueInDays(a) - dueInDays(b); }).slice(0, 6);
+  }
+  function sortOrders(list) {
+    return list.slice().sort(function (a, b) {
+      var k = String(b.createdAt).localeCompare(String(a.createdAt));
+      if (k) return k;
+      return String(b.id) > String(a.id) ? 1 : -1;
+    });
+  }
+  function nextNo(created) {
+    var same = state.orders.filter(function (o) { return o.createdAt === created; });
+    var mx = 0;
+    same.forEach(function (o) { if (o.no > mx) mx = o.no; });
+    return mx + 1;
+  }
+
+  // ---------- 搜索 ----------
+  function hay(o) {
+    var parts = [o.company, o.note, o.deliverDate, o.createdAt, dueOf(o), seqNo(o)];
+    if (o.items) o.items.forEach(function (it) { parts.push(it.name, it.qty, it.unit); });
+    return String(parts.join(' ')).toLowerCase().replace(/\s+/g, '');
+  }
+  function match(o, terms) {
+    var h = hay(o);
+    for (var i = 0; i < terms.length; i++) if (h.indexOf(terms[i]) < 0) return false;
+    return true;
+  }
+  function terms(kw) {
+    return String(kw || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  }
+  function filtered() {
+    var list = state.orders;
+    var t = terms(state.kw);
+    if (state.filter === 'pend') list = list.filter(function (o) { var s = statusOf(o); return s === 'pend' || s === 'wait'; });
+    else if (state.filter === 'due') list = list.filter(function (o) { var s = statusOf(o); return s === 'due' || s === 'over'; });
+    else if (state.filter === 'ship') list = list.filter(function (o) { return o.shipped; });
+    else if (state.filter === 'late') list = list.filter(function (o) {
+      return !o.deliverDate || !o.shipped ? false : diffDays(o.deliverDate, o.shippedAt || today()) > 0;
+    });
+    if (t.length) list = list.filter(function (o) { return match(o, t); });
+    return sortOrders(list);
+  }
+  function counts() {
+    var c = { all: state.orders.length, pend: 0, due: 0, ship: 0, late: 0 };
+    state.orders.forEach(function (o) {
+      var s = statusOf(o);
+      if (s === 'due' || s === 'over') c.due++;
+      else if (o.shipped) c.ship++;
+      else c.pend++;
+      if (o.deliverDate && o.shipped && diffDays(o.deliverDate, o.shippedAt || today()) > 0) c.late++;
+    });
+    return c;
+  }
+
+  function hl(text, kw) {
+    var raw = String(text == null ? '' : text);
+    var ts = terms(kw);
+    if (!ts.length) return esc(raw);
+    var low = raw.toLowerCase();
+    var spans = [];
+    ts.forEach(function (t) {
+      var i = low.indexOf(t);
+      while (i >= 0) { spans.push([i, i + t.length]); i = low.indexOf(t, i + t.length); }
+    });
+    if (!spans.length) return esc(raw);
+    spans.sort(function (a, b) { return a[0] - b[0]; });
+    var merged = [], cur = spans[0];
+    for (var i = 1; i < spans.length; i++) {
+      if (spans[i][0] <= cur[1]) cur = [cur[0], Math.max(cur[1], spans[i][1])];
+      else { merged.push(cur); cur = spans[i]; }
+    }
+    merged.push(cur);
+    var out = '', p = 0;
+    merged.forEach(function (s) {
+      out += esc(raw.slice(p, s[0])) + '<mark>' + esc(raw.slice(s[0], s[1])) + '</mark>';
+      p = s[1];
+    });
+    return out + esc(raw.slice(p));
+  }
+
+  // ---------- 渲染 ----------
+  function renderHead() {
+    el('hdToday').textContent = pretty(today());
+    var c = counts();
+    el('stats').innerHTML =
+      stat('到期需出货', c.due, c.due > 0) +
+      stat('待出货', c.pend, false) +
+      stat('已发出', c.ship, false) +
+      stat('全部订单', c.all, false);
+    var bdg = el('bdgList');
+    bdg.textContent = c.due > 99 ? '99+' : c.due;
+    bdg.className = 'bdg' + (c.due > 0 ? ' show' : '');
+  }
+  function stat(label, n, hot) {
+    return '<div class="stat' + (hot ? ' hot' : '') + '"><b>' + num(n) + '</b><span>' + label + '</span></div>';
+  }
+
+  function renderAlerts() {
+    var slot = el('alertSlot');
+    var rem = remindList();
+    var up = upcomingList();
+    if (!state.orders.length) { slot.innerHTML = ''; return; }
+    var h = '';
+    if (rem.length) {
+      var over = rem.filter(function (o) { return statusOf(o) === 'over'; }).length;
+      h += '<div class="alert' + (over ? ' over' : '') + '">';
+      h += '<div class="head"><strong>' + (over ? '有 ' + rem.length + ' 单已到出货提醒日' : '今天该出货 ' + rem.length + ' 单') + '</strong>' +
+        '<span class="tag ' + (over ? 'over' : 'due') + '">' + (over ? over + ' 单已逾期' : '提醒日') + '</span></div>';
+      rem.slice(0, 6).forEach(function (o) { h += remRow(o); });
+      if (rem.length > 6) h += '<p class="hint" style="margin-top:8px">另有 ' + (rem.length - 6) + ' 单未展示，可在「订单」里点「到期」筛选查看。</p>';
+      h += '</div>';
+    }
+    if (up.length) {
+      h += '<div class="card"><h2>未来 7 天到期 <span class="n">' + up.length + '</span></h2>';
+      up.forEach(function (o) { h += remRow(o, true); });
+      h += '</div>';
+    }
+    if (!rem.length && !up.length) {
+      h += '<div class="alert ok"><div class="head"><strong>暂无到期提醒</strong><span class="tag ship">已处理完</span></div>' +
+        '<p class="hint" style="margin-top:6px">点击「已发出」后，该订单就不再出现在这里。</p></div>';
+    }
+    slot.innerHTML = h;
+  }
+
+  function remRow(o, plain) {
+    var s = statusOf(o), d = dueInDays(o);
+    var when = d < 0 ? '已逾期 ' + (-d) + ' 天' : (d === 0 ? '今天出货' : d + ' 天后');
+    var tag = s === 'over' ? '<span class="tag over">' + when + '</span>'
+      : (s === 'due' ? '<span class="tag due">今天出货</span>' : '<span class="tag pend">' + when + '</span>');
+    var mi = o.items && o.items.length ? o.items[0].name : '';
+    return '<div class="rem"><div class="info"><b>' + hl(o.company, '') + '</b>' +
+      '<small>' + hl(itemsSummary(o.items), state.kw) + ' · ' + (o.items ? esc(fmtOne(o.items[0] || {})) : '') +
+      (o.deliverDate ? ' · 交付 ' + esc(withYear(o.deliverDate)) : '') + ' · 提醒 ' + esc(withYear(dueOf(o))) + '</small></div>' +
+      tag +
+      '<button type="button" class="btn sm ' + (plain ? 'tealsoft' : 'go') + '" data-ship="' + o.id + '">已发出</button>' +
+      (plain ? '' : '<button type="button" class="btn sm ghost" data-later="' + o.id + '">延后</button>') +
+      '</div>';
+  }
+
+  function row(o) {
+    var s = statusOf(o), d = dueInDays(o);
+    var dot = s === 'ship' ? 'ship' : (s === 'over' ? 'over' : (s === 'due' ? '' : (s === 'pend' ? '' : 'wait')));
+    var st;
+    if (s === 'ship') {
+      var late = o.deliverDate && o.shippedAt ? diffDays(o.deliverDate, o.shippedAt) : 0;
+      st = late > 0 ? '<span class="tag late">逾期 ' + late + ' 天发出</span>' : '<span class="tag ship">' + esc(withYear(o.shippedAt || '')) + ' 已发出</span>';
+    } else if (s === 'over') st = '<span class="tag over">已逾期 ' + (-d) + ' 天</span>';
+    else if (s === 'due') st = '<span class="tag due">今天出货</span>';
+    else if (s === 'pend') st = '<span class="tag pend">' + d + ' 天后提醒</span>';
+    else st = '<span class="tag pend">待出货</span>';
+
+    var line3 = '<span>录入 ' + esc(withYear(o.createdAt)) + '</span>·<span>提醒 ' + esc(withYear(dueOf(o))) + '</span>';
+    if (o.deliverDate) {
+      var dd = diffDays(today(), o.deliverDate);
+      line3 += '·<span>' + (dd < 0 ? '交付期已过 ' + (-dd) + ' 天' : '交付 ' + esc(withYear(o.deliverDate)) + (s === 'ship' ? '' : '（' + dd + ' 天内）')) + '</span>';
+    }
+
+    var qtyStr = o.items && o.items.length === 1
+      ? '<span class="qty">' + esc(fmtOne(o.items[0])) + '</span>'
+      : '<span class="qty">' + o.items.length + ' 件货</span>';
+
+    var open = state.openId === o.id;
+    var h = '<div class="o"><div class="main">' +
+      '<span class="dot ' + dot + '"></span>' +
+      '<div class="body">' +
+      '<div class="l1"><span class="co">' + hl(o.company, state.kw) + '</span><span class="no">' + esc(seqNo(o)) + '</span></div>' +
+      '<div class="l2"><span>' + hl(itemsSummary(o.items), state.kw) + '</span>' + qtyStr + st + '</div>' +
+      '<div class="l3">' + line3 + '</div>' +
+      '</div>' +
+      '<button type="button" class="expand" data-open="' + o.id + '">' + (open ? '收起' : '详情') + '</button>' +
+      '</div>';
+
+    if (open) h += detail(o);
+    h += '</div>';
+    return h;
+  }
+
+  function detail(o) {
+    var h = '<div class="detail"><dl>';
+    if (o.items && o.items.length) {
+      o.items.forEach(function (it, i) {
+        h += dt('货品 ' + (i + 1), hl(it.name, state.kw) + ' <span style="font-weight:700;color:var(--teal)">' + esc(fmtOne(it)) + '</span>');
+      });
+    }
+    h += dt('交付日期', o.deliverDate ? esc(withYear(o.deliverDate)) : '<span style="color:var(--ink-3)">未填写</span>');
+    h += dt('提醒日期', esc(withYear(dueOf(o))) + (o.remindAuto === false ? '（手动指定）' : '（提交后第 ' + state.cfg.remindDays + ' 天）'));
+    h += dt('状态', o.shipped ? '已发出' : (isRemind(o) ? '到期需出货' : '待出货'));
+    if (o.shippedAt) h += dt('发出日期', esc(withYear(o.shippedAt)));
+    h += dt('录入时间', esc(withYear(o.createdAt)) + ' ' + esc(o.createdTime || ''));
+    h += dt('备注', o.note ? hl(o.note, state.kw).replace(/\n/g, '<br>') : '<span style="color:var(--ink-3)">无</span>');
+    h += '</dl>';
+    h += '<div class="rowbtns">';
+    if (!o.shipped) h += '<button type="button" class="btn sm go" data-ship="' + o.id + '">已发出</button>';
+    else h += '<button type="button" class="btn sm ghost" data-unship="' + o.id + '">撤销发出</button>';
+    h += '<button type="button" class="btn sm tealsoft" data-edit="' + o.id + '">修改</button>';
+    h += '<button type="button" class="btn sm ghost" data-again="' + o.id + '">复制再记一单</button>';
+    h += '<button type="button" class="btn sm danger" data-del="' + o.id + '">删除</button>';
+    h += '</div></div>';
+    return h;
+  }
+  function dt(k, v) { return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
+
+  function renderList() {
+    var slot = el('listSlot');
+    var list = filtered();
+    var c = counts();
+    var chips = [
+      ['all', '全部', c.all], ['due', '到期', c.due], ['pend', '待出货', c.pend], ['ship', '已发出', c.ship], ['late', '逾期发出', c.late]
+    ];
+    el('chips').innerHTML = chips.map(function (x) {
+      return '<button type="button" class="chip' + (state.filter === x[0] ? ' on' : '') + '" data-f="' + x[0] + '">' +
+        x[1] + '<span class="c">' + x[2] + '</span></button>';
+    }).join('');
+
+    var meta;
+    if (state.kw) meta = '关键词「' + state.kw + '」命中 ' + list.length + ' 单（共 ' + c.all + ' 单）' + (list.length === 1 ? '' : '，按录入时间从新到旧');
+    else meta = '共 ' + list.length + ' 单' + (list.length <= 1 ? '' : '，按录入时间从新到旧');
+    el('listMeta').textContent = meta;
+
+    if (!list.length) {
+      slot.innerHTML = '<div class="card"><div class="empty"><b>' +
+        (c.all ? '没有符合条件的订单' : '还没有订单') + '</b>' +
+        (c.all ? '换个关键词，或点上面的筛选看看' : '在「记一单」里填公司和货品就能提交') + '</div></div>';
+      return;
+    }
+    var byDay = {}, order = [];
+    list.forEach(function (o) {
+      var k = o.createdAt;
+      if (!byDay[k]) { byDay[k] = []; order.push(k); }
+      byDay[k].push(o);
+    });
+    var h = '';
+    order.forEach(function (k) {
+      var isToday = k === today();
+      h += '<div class="group">' + (isToday ? '今天录入' : esc(withYear(k))) + ' · ' + byDay[k].length + ' 单</div>';
+      byDay[k].forEach(function (o) { h += row(o); });
+    });
+    slot.innerHTML = h;
+    bindRemBtns(slot);
+  }
+
+  function bindRemBtns(root) {
+    root.querySelectorAll('[data-ship]').forEach(function (b) {
+      b.addEventListener('click', function () { markShipped(b.getAttribute('data-ship'), false); });
+    });
+    root.querySelectorAll('[data-unship]').forEach(function (b) {
+      b.addEventListener('click', function () { unship(b.getAttribute('data-unship')); });
+    });
+    root.querySelectorAll('[data-later]').forEach(function (b) {
+      b.addEventListener('click', function () { postpone(b.getAttribute('data-later')); });
+    });
+    root.querySelectorAll('[data-edit]').forEach(function (b) {
+      b.addEventListener('click', function () { startEdit(b.getAttribute('data-edit')); });
+    });
+    root.querySelectorAll('[data-again]').forEach(function (b) {
+      b.addEventListener('click', function () { cloneOrder(b.getAttribute('data-again')); });
+    });
+    root.querySelectorAll('[data-del]').forEach(function (b) {
+      b.addEventListener('click', function () { del(b.getAttribute('data-del')); });
+    });
+    root.querySelectorAll('[data-open]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-open');
+        state.openId = state.openId === id ? null : id;
+        renderAll();
+      });
+    });
+  }
+
+  function renderRecent() {
+    var list = sortOrders(state.orders).slice(0, 3);
+    el('recentN').textContent = list.length;
+    el('recentList').innerHTML = list.length
+      ? list.map(row).join('')
+      : '<div class="empty"><b>还没有订单</b>提交第一条后，这里会显示最近三单</div>';
+    bindRemBtns(el('recentList'));
+  }
+
+  function renderMe() {
+    var c = counts();
+    var ships = state.orders.filter(function (o) { return o.shipped && o.shippedAt && o.createdAt; });
+    var sum = 0;
+    ships.forEach(function (o) { sum += Math.max(0, diffDays(o.createdAt, o.shippedAt)); });
+    var avg = ships.length ? (sum / ships.length) : 0;
+    var monthKey = today().slice(0, 7);
+    var mNew = state.orders.filter(function (o) { return o.createdAt.slice(0, 7) === monthKey; }).length;
+    var mShip = state.orders.filter(function (o) { return o.shippedAt && o.shippedAt.slice(0, 7) === monthKey; }).length;
+    var h = '';
+    h += kv('全部订单', num(c.all) + ' 单');
+    h += kv('待出货', num(c.pend) + ' 单');
+    h += kv('到期需出货', num(c.due) + ' 单');
+    h += kv('已发出', num(c.ship) + ' 单');
+    h += kv('逾期后发出', num(c.late) + ' 单');
+    h += kv('本月录入 / 本月发出', num(mNew) + ' / ' + num(mShip));
+    h += kv('录入到发出平均用时', ships.length ? avg.toFixed(1) + ' 天（' + ships.length + ' 单样本）' : '暂无已发出订单');
+    h += kv('存储占用', bytesOf() + '（本机浏览器）');
+    el('overview').innerHTML = h;
+    el('rmDays').value = state.cfg.remindDays;
+    el('defUnitTxt').textContent = state.cfg.defUnit;
+    var lb = '';
+    try { lb = localStorage.getItem(LAST) || ''; } catch (e) { }
+    el('lastBackup').textContent = lb ? lb : '从未导出';
+    el('helpBody').innerHTML = helpHtml();
+  }
+  function kv(k, v) { return '<div class="kv"><span>' + k + '</span><b>' + v + '</b></div>'; }
+  function bytesOf() {
+    var s = '';
+    try { s = localStorage.getItem(LS) || ''; } catch (e) { }
+    var n = s.length * 2;
+    return n > 1024 ? (n / 1024).toFixed(1) + ' KB' : n + ' B';
+  }
+
+  function helpHtml() {
+    var t = '订单提醒助手.html';
+    return '' +
+      '<p>三种做法，任选一种：</p>' +
+      '<h3>方式一 · 夸克浏览器（推荐）</h3><ol>' +
+      '<li>把 <code>' + t + '</code> 传到手机（网盘、微信文件、数据线都可以）。</li>' +
+      '<li>用夸克浏览器打开该文件。</li>' +
+      '<li>点菜单里的「<b>添加到主屏幕</b>／创建快捷方式」，桌面就会出现图标，点图标可全屏当 App 用。</li></ol>' +
+      '<h3>方式二 · 苹果自带 Safari</h3><ol>' +
+      '<li>用「文件」App 保存 <code>' + t + '</code>，在分享里选「用 Safari 打开」。</li>' +
+      '<li>点下方分享按钮 →「<b>添加到主屏幕</b>」。</li></ol>' +
+      '<h3>方式三 · 安卓自带浏览器</h3><ol>' +
+      '<li>用系统浏览器／夸克打开文件 → 菜单 →「添加到主屏幕」。</li></ol>' +
+      '<h3>一定要记住的三件事</h3><ul>' +
+      '<li>数据保存在<b>这台手机这个浏览器</b>里，不上传任何服务器，离线可用。</li>' +
+      '<li>换手机、卸载浏览器、清理缓存前，先到「我的」→「<b>导出 JSON 备份</b>」，新机用「导入 JSON 恢复」。</li>' +
+      '<li>不要同时开两份页面编辑，后保存的一方会覆盖先保存的一方；建议同一时间只在一处录入。</li></ul>';
+  }
+
+  function renderAll() {
+    renderHead();
+    if (state.page === 'new') { renderAlerts(); renderRecent(); }
+    if (state.page === 'list') renderList();
+    if (state.page === 'me') renderMe();
+    updatePrev();
+  }
+
+  // ---------- 货物行 UI ----------
+  function renderItems() {
+    var container = el('itemsList');
+    if (!state.items.length) state.items.push(emptyItem());
+    var h = '';
+    state.items.forEach(function (it, i) {
+      var k = it.kind || 'count';
+      var units = UNITS[k] || [];
+      var wOn = k === 'weight' ? ' on' : '';
+      var cOn = k === 'count' ? ' on' : '';
+      h += '<div class="item-row" data-ix="' + i + '">' +
+        '<div class="ir-top">' +
+        '<span class="ir-ix">货物 ' + (i + 1) + '</span>' +
+        '<div class="ir-name"><input type="text" class="ir-name-inp" placeholder="例：304 不锈钢法兰 DN50" value="' + esc(it.name) + '" maxlength="80"></div>' +
+        (state.items.length > 1 ? '<button type="button" class="ir-close" data-rm="' + i + '">×</button>' : '') +
+        '</div>' +
+        '<div class="ir-qty">' +
+        '<div class="switch"><button type="button" data-k="weight" class="' + (k === 'weight' ? 'on' : '') + '">重量</button><button type="button" data-k="count" class="' + (k === 'count' ? 'on' : '') + '">个数</button></div>' +
+        '<div class="ir-num"><input type="text" class="ir-num-inp" inputmode="decimal" placeholder="例：12.5" value="' + esc(String(it.qty || '')) + '" maxlength="14"></div>' +
+        '<div class="ir-unit"><select class="ir-unit-sel">' + units.map(function (u) { return '<option value="' + u + '"' + (u === (it.unit || units[0]) ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></div>' +
+        '</div>' +
+        '</div>';
+    });
+    container.innerHTML = h;
+    bindItemEvents();
+  }
+
+  function bindItemEvents() {
+    // kind toggle
+    el('itemsList').querySelectorAll('.switch').forEach(function (sw) {
+      sw.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-k]');
+        if (!b) return;
+        var row = b.closest('.item-row');
+        var ix = parseInt(row.getAttribute('data-ix'), 10);
+        var k = b.getAttribute('data-k');
+        state.items[ix].kind = k;
+        var units = UNITS[k];
+        var sel = row.querySelector('.ir-unit-sel');
+        var keep = sel.value;
+        sel.innerHTML = units.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join('');
+        if (units.indexOf(keep) >= 0) sel.value = keep;
+        row.querySelectorAll('.switch button').forEach(function (bb) { bb.className = bb.getAttribute('data-k') === k ? 'on' : ''; });
+      });
+    });
+    // remove
+    el('itemsList').querySelectorAll('[data-rm]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var ix = parseInt(b.getAttribute('data-rm'), 10);
+        state.items.splice(ix, 1);
+        renderItems();
+      });
+    });
+    // input sync
+    el('itemsList').querySelectorAll('.ir-name-inp').forEach(function (inp, i) {
+      inp.addEventListener('input', function () { state.items[i].name = inp.value; });
+    });
+    el('itemsList').querySelectorAll('.ir-num-inp').forEach(function (inp, i) {
+      inp.addEventListener('input', function () { state.items[i].qty = inp.value; });
+    });
+    el('itemsList').querySelectorAll('.ir-unit-sel').forEach(function (sel, i) {
+      sel.addEventListener('change', function () { state.items[i].unit = sel.value; });
+    });
+  }
+
+  function emptyItem() { return { name: '', qty: '', unit: state.cfg.defUnit || '件', kind: 'count' }; }
+
+  function collectItems() {
+    var out = [];
+    state.items.forEach(function (it) {
+      var name = String(it.name || '').trim();
+      var qtyRaw = String(it.qty || '').trim().replace(/[,，]/g, '');
+      if (!name || !qtyRaw) return;
+      if (!/^\d+(\.\d{1,4})?$/.test(qtyRaw)) return;
+      var qty = parseFloat(qtyRaw);
+      if (!(qty > 0)) return;
+      out.push({ name: name.slice(0, 80), qty: qty, unit: it.unit || '', kind: it.kind || 'count' });
+    });
+    return out;
+  }
+
+  // ---------- 表单 ----------
+  function previewDate() {
+    var v = el('fRemind').value;
+    if (v) return v;
+    var d = el('fDelivery').value;
+    return d ? addDays(d, -1) : addDays(today(), state.cfg.remindDays);
+  }
+  function updatePrev() {
+    var box = el('remindPrev');
+    if (!box) return;
+    var v = el('fRemind').value;
+    var d = el('fDelivery').value;
+    var auto = previewDate();
+    var dd = diffDays(today(), auto);
+    var why = v ? '手动指定' : (d ? '交付日前 1 天（默认规则）' : '提交后第 ' + state.cfg.remindDays + ' 天（默认规则）');
+    box.innerHTML = '默认提醒 <b>' + esc(withYear(auto) || '—') + '</b>（' + esc(why) + '）' +
+      (dd === 0 ? '<b>就是今天</b>' : (dd > 0 ? '，还有 ' + dd + ' 天' : '，已过 ' + (-dd) + ' 天')) +
+      (d ? '<br>如需改成交付日前 N 天，直接改上面「提醒日期」即可（改过就锁定，不再自动变）。' : '');
+  }
+
+  function resetForm() {
+    state.editId = null;
+    el('form').reset();
+    el('fId').value = '';
+    el('fRemind').value = '';
+    el('fDelivery').value = '';
+    el('formTitle').textContent = '记一单';
+    el('formHint').textContent = '填公司和货品就能提交，可添加多件货物。';
+    el('submitBtn').textContent = '提交并生成订单';
+    el('editBtns').style.display = 'none';
+    state.items = [emptyItem()];
+    renderItems();
+    updatePrev();
+  }
+
+  function startEdit(id) {
+    var o = state.orders.filter(function (x) { return x.id === id; })[0];
+    if (!o) return;
+    state.editId = id;
+    go('new');
+    el('fId').value = id;
+    el('fCompany').value = o.company;
+    el('fDelivery').value = o.deliverDate || '';
+    el('fRemind').value = (o.remindAuto === false ? (o.remindDate || '') : '');
+    el('fNote').value = o.note || '';
+    state.items = (o.items && o.items.length) ? o.items.map(function (it) { return { name: it.name, qty: String(it.qty), unit: it.unit, kind: it.kind }; }) : [emptyItem()];
+    renderItems();
+    el('formTitle').textContent = '修改订单 ' + seqNo(o);
+    el('formHint').textContent = '录入日期保持为 ' + withYear(o.createdAt) + '，改动后会重算提醒日。';
+    el('submitBtn').textContent = '保存修改';
+    el('editBtns').style.display = 'flex';
+    updatePrev();
+    window.scrollTo(0, 0);
+  }
+
+  function cloneOrder(id) {
+    var o = state.orders.filter(function (x) { return x.id === id; })[0];
+    if (!o) return;
+    resetForm();
+    el('fCompany').value = o.company;
+    el('fNote').value = o.note || '';
+    state.items = (o.items && o.items.length) ? o.items.map(function (it) { return { name: it.name, qty: String(it.qty), unit: it.unit, kind: it.kind }; }) : [emptyItem()];
+    renderItems();
+    updatePrev();
+    go('new');
+    toast('已复制 ' + state.items.length + ' 件货物，改交付日期后提交即可');
+  }
+
+  function submitForm(ev) {
+    ev.preventDefault();
+
+    // sync inputs to state before collecting
+    var nameInps = el('itemsList').querySelectorAll('.ir-name-inp');
+    var numInps = el('itemsList').querySelectorAll('.ir-num-inp');
+    var unitSels = el('itemsList').querySelectorAll('.ir-unit-sel');
+    for (var i = 0; i < Math.min(nameInps.length, state.items.length); i++) {
+      state.items[i].name = nameInps[i].value;
+      state.items[i].qty = numInps[i].value;
+      state.items[i].unit = unitSels[i].value;
+    }
+
+    var company = el('fCompany').value.trim();
+    var items = collectItems();
+    var deliver = el('fDelivery').value;
+    var remind = el('fRemind').value;
+    var note = el('fNote').value.trim();
+
+    if (!company) { toast('请填写公司名称'); el('fCompany').focus(); return; }
+    if (!items.length) { toast('请至少填写一件货物的名称和数量'); el('itemsList').querySelector('.ir-name-inp').focus(); return; }
+    if (deliver && !parseYmd(deliver)) { toast('交付日期格式不正确'); return; }
+    if (remind && !parseYmd(remind)) { toast('提醒日期格式不正确'); return; }
+
+    var now = new Date();
+    if (state.editId) {
+      var o = state.orders.filter(function (x) { return x.id === state.editId; })[0];
+      if (!o) { toast('这条订单已不存在'); resetForm(); return; }
+      o.company = company; o.items = items; o.note = note.slice(0, 300);
+      o.deliverDate = deliver || '';
+      if (remind) { o.remindDate = remind; o.remindAuto = false; }
+      else { o.remindDate = ''; o.remindAuto = true; }
+      if (saveOrders()) {
+        toast('已保存修改，提醒日 ' + (withYear(dueOf(o)) || '—'));
+        state.editId = null;
+        state.openId = o.id;
+        resetForm();
+        state.items = o.items.map(function (it) { return { name: it.name, qty: String(it.qty), unit: it.unit, kind: it.kind }; });
+        renderAll();
+      }
+      return;
+    }
+
+    var created = today();
+    var rec = {
+      id: uid(),
+      no: nextNo(created),
+      company: company,
+      items: items,
+      deliverDate: deliver || '',
+      remindDate: remind || '',
+      remindAuto: remind ? false : true,
+      note: note.slice(0, 300),
+      createdAt: created,
+      createdTime: pad(now.getHours()) + ':' + pad(now.getMinutes()),
+      shipped: false,
+      shippedAt: '',
+      updatedAt: ''
+    };
+    if (!probeStorage()) { storeWarn(); toast('本机浏览器不允许保存数据，无法提交'); return; }
+    state.orders.push(rec);
+    if (!saveOrders()) { state.orders.pop(); return; }
+    state.cfg.defUnit = items[0].unit;
+    saveCfg();
+    toast('已记上一单：' + rec.company + ' · ' + itemsSummary(rec.items) + '，' + (withYear(dueOf(rec)) || '—') + ' 提醒', rec.id);
+    resetForm();
+    renderAll();
+  }
+
+  // ---------- 操作 ----------
+  function find(id) {
+    for (var i = 0; i < state.orders.length; i++) if (state.orders[i].id === id) return state.orders[i];
+    return null;
+  }
+  function markShipped(id, silent) {
+    var o = find(id);
+    if (!o) return;
+    o.shipped = true;
+    o.shippedAt = today();
+    o.updatedAt = today();
+    if (!saveOrders()) return;
+    var late = o.deliverDate ? diffDays(o.deliverDate, o.shippedAt) : 0;
+    if (!silent) toast(o.company + ' 已标记发出，之后不再提醒' + (late > 0 ? '（比交付日期晚 ' + late + ' 天）' : ''));
+    renderAll();
+  }
+  function unship(id) {
+    var o = find(id);
+    if (!o) return;
+    o.shipped = false; o.shippedAt = '';
+    if (!saveOrders()) return;
+    toast('已撤销发出，恢复提醒');
+    renderAll();
+  }
+  function postpone(id) {
+    var o = find(id);
+    if (!o) return;
+    var base = dueOf(o);
+    if (!diffDays(today(), base)) base = today();
+    var n = addDays(base, 1) || today();
+    o.remindDate = n; o.remindAuto = false;
+    if (!saveOrders()) return;
+    toast('提醒延后到 ' + (withYear(n) || n));
+    renderAll();
+  }
+  function del(id) {
+    var o = find(id);
+    if (!o) return;
+    if (!window.confirm('删除这一单？\n\n' + o.company + ' · ' + itemsSummary(o.items) + '\n删除后无法恢复（备份文件里如有可重新导入）。')) return;
+    state.orders = state.orders.filter(function (x) { return x.id !== id; });
+    if (state.openId === id) state.openId = null;
+    if (state.editId === id) resetForm();
+    saveOrders();
+    toast('已删除');
+    renderAll();
+  }
+
+  // ---------- 导出 ----------
+  var CN = ['订单号', '公司/客户', '货品名称', '数量', '单位', '交付日期', '提醒日期', '状态', '发出日期', '录入日期', '备注', '是否锁定提醒日'];
+  function csvCells(o) {
+    var s = statusOf(o);
+    var base = [
+      seqNo(o).replace('#', ''), o.company, '', '', '',
+      o.deliverDate || '', dueOf(o),
+      o.shipped ? '已发出' : (s === 'due' || s === 'over' ? '到期需出货' : '待出货'),
+      o.shippedAt || '', o.createdAt, (o.note || '').replace(/[\r\n]+/g, ' '),
+      o.remindAuto === false ? '是' : '否'
+    ];
+    if (o.items && o.items.length) {
+      return o.items.map(function (it, i) {
+        var row = base.slice();
+        row[2] = it.name; row[3] = it.qty; row[4] = it.unit;
+        return row;
+      });
+    }
+    return [base];
+  }
+  function csvCell(v) {
+    var s = String(v == null ? '' : v);
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function buildCsv(rows) {
+    var lines = [CN.map(csvCell).join(',')];
+    rows.forEach(function (o) {
+      var cells = csvCells(o);
+      cells.forEach(function (r) { lines.push(r.map(csvCell).join(',')); });
+    });
+    return lines.join('\r\n');
+  }
+  function stamp() {
+    var d = new Date();
+    return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes());
+  }
+  function safeName(n) { return String(n).replace(/[\\/:*?"<>|]/g, '_'); }
+  function saveBlob(name, mime, text) {
+    var blob = new Blob([text], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 500);
+    try { localStorage.setItem(LAST, new Date().toLocaleString('zh-CN')); } catch (e) { }
+    el('lastBackup').textContent = new Date().toLocaleString('zh-CN');
+    return name;
+  }
+  function exportCsv() {
+    var rows = sortOrders(state.orders);
+    if (!rows.length) { toast('还没有订单可导出'); return; }
+    var name = safeName('订单备份') + '-' + stamp() + '.csv';
+    saveBlob(name, 'text/csv;charset=utf-8', '\ufeff' + buildCsv(rows));
+    toast('已导出 ' + rows.length + ' 单到多行 CSV：' + name);
+  }
+  function exportJson() {
+    if (!state.orders.length) { toast('还没有订单可导出'); return; }
+    var data = { app: 'dd-orders', version: 2, exportedAt: new Date().toISOString(), remindDays: state.cfg.remindDays, orders: sortOrders(state.orders) };
+    var name = safeName('订单完整备份') + '-' + stamp() + '.json';
+    saveBlob(name, 'application/json;charset=utf-8', JSON.stringify(data, null, 2));
+    toast('已导出 ' + state.orders.length + ' 单完整备份：' + name);
+  }
+  function importJson(file) {
+    var fr = new FileReader();
+    fr.onload = function () {
+      var txt = String(fr.result || '').replace(/^\ufeff/, '');
+      try {
+        var d = JSON.parse(txt);
+        var arr = Array.isArray(d) ? d : (d && Array.isArray(d.orders) ? d.orders : null);
+        if (!arr) { toast('文件里没有订单数据，请确认选的是导出的备份文件'); return; }
+        var recs = arr.map(normRec).filter(Boolean);
+        if (!recs.length) { toast('备份文件里的记录都不完整，已取消导入'); return; }
+        var ids = {}, dup = 0;
+        state.orders.forEach(function (o) { ids[o.id] = 1; });
+        var add = recs.filter(function (o) {
+          if (ids[o.id]) { dup++; return false; }
+          ids[o.id] = 1; return true;
+        });
+        if (!add.length) { toast('这 ' + recs.length + ' 单本机已全部存在，无需重复导入'); return; }
+        if (!window.confirm('导入备份\n\n文件共 ' + recs.length + ' 单，其中新增 ' + add.length + ' 单' + (dup ? '，跳过重复 ' + dup + ' 单' : '') + '。\n\n确定导入？本机已有订单不会被覆盖。')) return;
+        state.orders = state.orders.concat(add);
+        if (!saveOrders()) return;
+        recompute();
+        toast('导入成功，新增 ' + add.length + ' 单');
+        renderAll();
+      } catch (e) {
+        toast('无法读取该文件：不是有效的 JSON 备份');
+      }
+    };
+    fr.onerror = function () { toast('读取文件失败'); };
+    fr.readAsText(file, 'utf-8');
+  }
+  function normRec(x) {
+    if (!x || typeof x !== 'object') return null;
+    var company = String(x.company || '').trim();
+    if (!company) return null;
+    // items
+    var items = [];
+    if (Array.isArray(x.items) && x.items.length) {
+      x.items.forEach(function (it) {
+        var name = String(it.name || '').trim();
+        var qty = parseFloat(it.qty);
+        if (name && qty > 0) items.push({ name: name.slice(0, 80), qty: qty, unit: String(it.unit || '').slice(0, 8), kind: it.kind === 'weight' ? 'weight' : 'count' });
+      });
+    }
+    // legacy single item
+    if (!items.length) {
+      var name = String(x.item || '').trim();
+      var qty = parseFloat(x.qty);
+      if (name && qty > 0) items.push({ name: name.slice(0, 80), qty: qty, unit: String(x.unit || '').slice(0, 8), kind: x.kind === 'weight' ? 'weight' : 'count' });
+    }
+    if (!items.length) return null;
+    var created = parseYmd(x.createdAt) ? String(x.createdAt) : today();
+    var shipped = !!x.shipped;
+    var remindAuto = x.remindAuto === false ? false : true;
+    var rd = parseYmd(x.remindDate) ? String(x.remindDate) : '';
+    return {
+      id: String(x.id || uid()),
+      no: /^\d+$/.test(String(x.no == null ? '' : x.no)) ? parseInt(x.no, 10) : nextNo(created),
+      company: company.slice(0, 60),
+      items: items,
+      deliverDate: parseYmd(x.deliverDate) ? String(x.deliverDate) : '',
+      remindDate: remindAuto ? '' : rd,
+      remindAuto: remindAuto,
+      note: String(x.note || '').slice(0, 300),
+      createdAt: created,
+      createdTime: /^\d{2}:\d{2}$/.test(String(x.createdTime || '')) ? String(x.createdTime) : '',
+      shipped: shipped,
+      shippedAt: shipped && parseYmd(x.shippedAt) ? String(x.shippedAt) : (shipped ? created : ''),
+      updatedAt: parseYmd(x.updatedAt) ? String(x.updatedAt) : ''
+    };
+  }
+  function wipe() {
+    if (!state.orders.length) { toast('当前没有数据'); return; }
+    if (!window.confirm('清空全部 ' + state.orders.length + ' 条订单？\n\n删除后本机无法恢复，除非你之前导出过 JSON 备份。\n建议先点「导出 JSON 备份」。')) return;
+    state.orders = [];
+    state.openId = null;
+    saveOrders();
+    resetForm();
+    renderAll();
+    toast('已清空');
+  }
+
+  // ---------- 导航 ----------
+  function go(page) {
+    state.page = page;
+    ['new', 'list', 'me'].forEach(function (p) {
+      el('pg-' + p).className = 'page' + (p === page ? ' on' : '');
+    });
+    document.querySelectorAll('nav.tabs button').forEach(function (b) {
+      b.className = b.getAttribute('data-tab') === page ? 'on' : '';
+    });
+    renderAll();
+    window.scrollTo(0, 0);
+  }
+
+  function toast(msg, shipId) {
+    var t = el('toast');
+    el('toastMsg').textContent = msg;
+    t.querySelectorAll('button').forEach(function (b) { b.remove(); });
+    if (shipId) {
+      var b = document.createElement('button');
+      b.textContent = '标记已发出';
+      b.addEventListener('click', function () { markShipped(shipId); hideToast(); });
+      t.appendChild(b);
+    }
+    t.className = 'toast show';
+    clearTimeout(state.toastTimer);
+    state.toastTimer = setTimeout(hideToast, shipId ? 8000 : 2600);
+  }
+  function hideToast() {
+    clearTimeout(state.toastTimer);
+    el('toast').className = 'toast';
+  }
+
+  // ---------- 绑定 ----------
+  function bind() {
+    el('form').addEventListener('submit', submitForm);
+    el('fCompany').addEventListener('input', function () { });
+    el('fRemind').addEventListener('change', updatePrev);
+    el('fDelivery').addEventListener('change', updatePrev);
+    el('cancelEdit').addEventListener('click', function () { resetForm(); renderAll(); toast('已取消编辑'); });
+    el('addItemBtn').addEventListener('click', function () {
+      state.items.push(emptyItem());
+      renderItems();
+      // scroll to last item
+      var rows = el('itemsList').querySelectorAll('.item-row');
+      if (rows.length) rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    el('q').addEventListener('input', function () {
+      state.kw = el('q').value;
+      el('qClear').style.display = state.kw ? 'block' : 'none';
+      renderList();
+    });
+    el('qClear').addEventListener('click', function () {
+      el('q').value = ''; state.kw = ''; el('qClear').style.display = 'none'; renderList();
+    });
+    el('chips').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-f]');
+      if (!b) return;
+      state.filter = b.getAttribute('data-f');
+      renderList();
+    });
+
+    document.querySelectorAll('nav.tabs button').forEach(function (b) {
+      b.addEventListener('click', function () { go(b.getAttribute('data-tab')); });
+    });
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-go]');
+      if (b) go(b.getAttribute('data-go'));
+    });
+    el('alertSlot').addEventListener('click', function (e) {
+      var s = e.target.closest('[data-ship]');
+      if (s) { markShipped(s.getAttribute('data-ship'), false); return; }
+      var l = e.target.closest('[data-later]');
+      if (l) { postpone(l.getAttribute('data-later')); return; }
+    });
+
+    el('rmMinus').addEventListener('click', function () { setDays(state.cfg.remindDays - 1); });
+    el('rmPlus').addEventListener('click', function () { setDays(state.cfg.remindDays + 1); });
+    el('rmDays').addEventListener('change', function () { setDays(parseInt(el('rmDays').value, 10)); });
+    function setDays(n) {
+      if (isNaN(n)) n = 3;
+      n = Math.min(60, Math.max(0, n));
+      state.cfg.remindDays = n;
+      saveCfg();
+      recompute();
+      el('rmDays').value = n;
+      el('defUnitTxt').textContent = state.cfg.defUnit;
+      renderAll();
+      toast(n === 0 ? '提醒日改为提交当天' : '提醒改为提交后第 ' + n + ' 天（仅影响未手动指定提醒日的订单）');
+    }
+
+    el('expCsv').addEventListener('click', exportCsv);
+    el('expJson').addEventListener('click', exportJson);
+    el('impBtn').addEventListener('click', function () { el('impFile').click(); });
+    el('impFile').addEventListener('change', function () {
+      var f = el('impFile').files && el('impFile').files[0];
+      if (f) importJson(f);
+      el('impFile').value = '';
+    });
+    el('wipe').addEventListener('click', wipe);
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) renderAll();
+    });
+  }
+
+  // ---------- 启动 ----------
+  function init() {
+    loadCfg();
+    migrateLegacy();
+    state.orders = loadOrders();
+    bind();
+    resetForm();
+    if (!probeStorage()) storeWarn();
+    renderAll();
+    if (!state.orders.length) {
+      setTimeout(function () { toast('填好公司名称，添加货物后提交即可'); }, 400);
+    } else {
+      var rem = remindList();
+      if (rem.length) setTimeout(function () { toast('有 ' + rem.length + ' 单今天该出货'); }, 400);
+    }
+  }
+  init();
+})();
+
+</script>
+</body>
+</html>
