@@ -316,7 +316,7 @@ section.page.on{display:block}
   var LAST = 'dd_last_backup_v1';
 
   var UNITS = {
-    weight: ['吨', '千克', '斤', '公斤', '克', '吨位'],
+    weight: ['公斤', '千克', '斤', '吨', '克', '吨位'],
     count: ['个', '件', '箱', '包', '套', '袋', '桶', '卷', '米', '台', '只', '打']
   };
 
@@ -864,7 +864,7 @@ section.page.on{display:block}
     if (!state.items.length) state.items.push(emptyItem());
     var h = '';
     state.items.forEach(function (it, i) {
-      var k = it.kind || 'count';
+      var k = it.kind || 'weight';
       var units = UNITS[k] || [];
       var wOn = k === 'weight' ? ' on' : '';
       var cOn = k === 'count' ? ' on' : '';
