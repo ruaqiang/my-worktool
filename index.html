@@ -934,7 +934,7 @@ section.page.on{display:block}
       if (!/^\d+(\.\d{1,4})?$/.test(qtyRaw)) return;
       var qty = parseFloat(qtyRaw);
       if (!(qty > 0)) return;
-      out.push({ name: name.slice(0, 80), qty: qty, unit: it.unit || '', kind: it.kind || 'count' });
+      out.push({ name: name.slice(0, 80), qty: qty, unit: it.unit || '', kind: it.kind || 'weight' });
     });
     return out;
   }
